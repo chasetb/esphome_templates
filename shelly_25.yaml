@@ -1,7 +1,7 @@
 substitutions:
   device_name: ""
   pretty_name: ""
-  device_type: "Shelly 1PM"
+  device_type: "Shelly 2.5"
   icon_1: ""
   icon_2: ""
 

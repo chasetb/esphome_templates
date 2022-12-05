@@ -1,0 +1,143 @@
+substitutions:
+  device_name: ""
+  pretty_name: ""
+  device_type: "D1 Mini"
+
+esphome:
+  name: ${device_name}
+  comment: "${device_type}"
+  
+esp8266:
+  board: d1_mini
+  framework:
+    version: latest
+
+logger:
+    level: DEBUG
+
+api:
+  encryption:
+    key: !secret api_key
+  services:
+    - service: sensair_background_calibrate
+      then:
+        - senseair.background_calibration: senseair_s8
+    - service: sensair_background_calibration_result
+      then:
+        - senseair.background_calibration_result: senseair_s8
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: HIGH # for ESP8266 LOW/HIGH are mixed up, esphome/issues/issues/1532
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${device_name} Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+# web_server:
+#   port: 80
+#   auth:
+#     username: admin
+#     password: !secret web_server_password
+
+# Device Specific Config
+switch:
+  - platform: safe_mode
+    name: "Flash Mode (Safe Mode)"
+  - platform: restart
+    name: "${pretty_name} Restart"
+
+font:
+  - file: "font/SF-Mono-Regular.ttf"
+    id: sf_mono
+    size: 14
+
+uart:
+  - rx_pin: D5
+    tx_pin: D6
+    baud_rate: 9600
+    id: pms5003_uart
+
+  - rx_pin: D4
+    tx_pin: D3
+    baud_rate: 9600
+    id: senseair_s8_uart
+    # debug:
+    #   direction: BOTH
+    #   after:
+    #     bytes: 60
+    #   sequence:
+    #     - lambda: UARTDebug::log_hex(direction, bytes, ':');
+
+i2c:
+  sda: D2
+  scl: D1
+  scan: true
+
+sensor:
+  - platform: pmsx003
+    type: PMSX003
+    uart_id: pms5003_uart
+    pm_2_5:
+      id: pm25
+      name: "${pretty_name} PM25"
+      filters:
+        - sliding_window_moving_average:
+            window_size: 30
+            send_every: 30
+
+  - platform: senseair
+    id: senseair_s8
+    uart_id: senseair_s8_uart
+    co2:
+      name: "${pretty_name} CO2"
+      id: co2
+    update_interval: 60s
+
+  - platform: sht3xd
+    temperature:
+      id: temp
+      name: "${pretty_name} Temperature"
+    humidity:
+      id: humidity
+      name: "${pretty_name} Humidity"
+    update_interval: 90s
+
+  - platform: sgp30
+    tvoc:
+      name: "${pretty_name} TVOC"
+      accuracy_decimals: 1
+    eco2:
+      name: "${pretty_name} eCO2"
+      accuracy_decimals: 1
+    store_baseline: yes
+    address: 0x58
+    update_interval: 1s
+
+  - platform: wifi_signal
+    id: "${device_name}_wifi_signal"
+    name: "${pretty_name} WiFi Signal"
+    update_interval: 60s
+
+display:
+  - platform: ssd1306_i2c
+    model: "SH1106 128x64"
+    id: oled_display
+    address: 0x3C
+    lambda: |-
+      it.printf(0, 0, id(sf_mono), "TMP: %.0f°F", (id(temp).state*1.8)+32);
+      it.printf(0, 14, id(sf_mono), "HUM: %.0f", id(humidity).state);
+      it.printf(0, 28, id(sf_mono), "CO2: %.0fppm", id(co2).state);
+      it.printf(0, 42, id(sf_mono), "PM25: %.0f", id(pm25).state);
+
+interval:
+  - interval: 5s
+    # Cycle through page on display
+    then:
+      - component.update: oled_display
