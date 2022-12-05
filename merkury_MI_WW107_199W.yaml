@@ -1,0 +1,71 @@
+substitutions:
+  device_name: ""
+  pretty_name: ""
+  device_type: "Merkury MI-WW107-199W"
+  icon: ""
+
+esphome:
+  name: ${device_name}
+  comment: "${device_type}"
+
+esp8266:
+  board: esp01_1m
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: HIGH # for ESP8266 LOW/HIGH are mixed up, esphome/issues/issues/1532
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${device_name} Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+# web_server:
+#   port: 80
+#   auth:
+#     username: admin
+#     password: !secret web_server_password
+
+# Device Specific Config
+binary_sensor:
+  - platform: gpio
+    id: button1
+    pin:
+      number: GPIO12
+      inverted: true
+    on_click:
+      - light.toggle: lightid
+
+light:
+  - platform: binary
+    name: "${pretty_name}"
+    output: light_output
+    id: lightid
+    icon: ${icon}
+    restore_mode: RESTORE_DEFAULT_OFF
+  
+  - platform: status_led
+    id: led_green
+    name: "${device_name} Backlight"
+    restore_mode: ALWAYS_ON
+    entity_category: config
+    internal: true
+    pin:
+      number: GPIO0
+      inverted: true
+
+output:
+  - id: light_output
+    platform: gpio
+    pin: GPIO13

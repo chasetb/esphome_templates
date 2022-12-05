@@ -1,0 +1,131 @@
+substitutions:
+  device_name: ""
+  pretty_name: ""
+  device_type: "Shelly 1PM"
+  icon_1: ""
+  icon_2: ""
+
+esphome:
+  name: ${device_name}
+  comment: "${device_type}"
+
+esp8266:
+  board: esp01_1m
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: HIGH # for ESP8266 LOW/HIGH are mixed up, esphome/issues/issues/1532
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "${device_name} Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+# web_server:
+#   port: 80
+#   auth:
+#     username: admin
+#     password: !secret web_server_password
+
+# Device Specific Config
+i2c:
+  sda: GPIO12
+  scl: GPIO14
+
+sensor:
+  - platform: ade7953
+    irq_pin: GPIO16 # Prevent overheating by setting this
+    voltage:
+      name: ${device_name} Voltage
+    # On the Shelly 2.5 channels are mixed ch1=B ch2=A
+    current_a:
+      name: ${device_name} Current B
+    current_b:
+      name: ${device_name} Current A
+    active_power_a:
+      name: ${device_name} Active Power B
+      # active_power_a is normal, so don't multiply by -1
+    active_power_b:
+      name: ${device_name} Active Power A
+      # active_power_b is inverted, so take the absolute value
+      filters:
+        - lambda: return abs(x);
+    update_interval: 60s
+
+  # NTC Temperature
+  - platform: ntc
+    sensor: temp_resistance_reading
+    name: ${device_name} Temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    calibration:
+      b_constant: 3350
+      reference_resistance: 10kOhm
+      reference_temperature: 298.15K
+  - platform: resistance
+    id: temp_resistance_reading
+    sensor: temp_analog_reading
+    configuration: DOWNSTREAM
+    resistor: 32kOhm
+  - platform: adc
+    id: temp_analog_reading
+    pin: A0
+
+status_led:
+  pin:
+    number: GPIO0
+    inverted: yes
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO13
+    name: ${device_name} Switch 1
+    on_state:
+      then:
+        - light.toggle: lightid_1
+    internal: true
+  - platform: gpio
+    pin:
+      number: GPIO5
+    name: ${device_name} Switch 2
+    on_state:
+      then:
+        - light.toggle: lightid_2
+    internal: true
+
+light:
+  - platform: binary
+    name: "${pretty_name} 1"
+    output: light_output_1
+    id: lightid_1
+    icon: ${icon_1}
+    restore_mode: RESTORE_DEFAULT_OFF
+
+  - platform: binary
+    name: "${pretty_name} 2"
+    output: light_output_2
+    id: lightid_2
+    icon: ${icon_2}
+    restore_mode: RESTORE_DEFAULT_OFF
+
+output:
+  - id: light_output_1
+    platform: gpio
+    pin: GPIO4
+
+  - id: light_output_2
+    platform: gpio
+    pin: GPIO15
