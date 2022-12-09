@@ -1,0 +1,36 @@
+substitutions:
+  device_name: ""
+  pretty_name: ""
+  device_type: "Sonoff Basic"
+  icon: ""
+  board: "esp01_1m"
+  framework_version: "recommended"
+  logger_level: INFO
+
+# Common ESP8266 Config
+<<: !include .common_esp8266.yaml
+
+# Device Specific Config
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "${pretty_name} Button"
+    on_press:
+      - switch.toggle: relay
+
+switch:
+  - platform: gpio
+    name: "${pretty_name} Switch"
+    pin: GPIO12
+    id: relay
+    icon: $icon
+
+status_led:
+  pin:
+    number: GPIO13
+    inverted: yes

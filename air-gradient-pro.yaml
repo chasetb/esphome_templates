@@ -1,19 +1,14 @@
 substitutions:
   device_name: ""
   pretty_name: ""
+  wifi_name: ""  # Can't use dashes in the name here, use underscores instead
   device_type: "D1 Mini"
+  board: "d1_mini"
+  framework_version: "latest"
+  logger_level: DEBUG
 
-esphome:
-  name: ${device_name}
-  comment: "${device_type}"
-  
-esp8266:
-  board: d1_mini
-  framework:
-    version: latest
-
-logger:
-    level: DEBUG
+# Common ESP8266 Config
+<<: !include .common_esp8266.yaml
 
 api:
   encryption:
@@ -25,26 +20,6 @@ api:
     - service: sensair_background_calibration_result
       then:
         - senseair.background_calibration_result: senseair_s8
-
-ota:
-  password: !secret ota_password
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  power_save_mode: HIGH # for ESP8266 LOW/HIGH are mixed up, esphome/issues/issues/1532
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "${device_name} Fallback"
-    password: !secret fallback_password
-
-captive_portal:
-
-# web_server:
-#   port: 80
-#   auth:
-#     username: admin
-#     password: !secret web_server_password
 
 # Device Specific Config
 switch:
@@ -121,7 +96,7 @@ sensor:
     update_interval: 1s
 
   - platform: wifi_signal
-    id: "${device_name}_wifi_signal"
+    id: "${wifi_name}_wifi_signal"
     name: "${pretty_name} WiFi Signal"
     update_interval: 60s
 
