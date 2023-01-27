@@ -10,6 +10,7 @@ substitutions:
 # Common ESP8266 Config
 <<: !include .common_esp8266.yaml
 
+# Enable Home Assistant API
 api:
   encryption:
     key: !secret api_key
@@ -31,45 +32,25 @@ switch:
 font:
   - file: "font/SF-Mono-Regular.ttf"
     id: sf_mono
-    size: 14
+    size: 10
 
 uart:
   - rx_pin: D5
     tx_pin: D6
     baud_rate: 9600
-    id: pms5003_uart
-
+    id: uart1
+    
   - rx_pin: D4
     tx_pin: D3
     baud_rate: 9600
-    id: senseair_s8_uart
+    id: uart2
 
 i2c:
   sda: D2
   scl: D1
-  scan: true
   frequency: 100kHz
 
 sensor:
-  - platform: pmsx003
-    type: PMSX003
-    uart_id: pms5003_uart
-    pm_2_5:
-      id: pm25
-      name: "${pretty_name} PM25"
-      filters:
-        - sliding_window_moving_average:
-            window_size: 30
-            send_every: 30
-
-  - platform: senseair
-    id: senseair_s8
-    uart_id: senseair_s8_uart
-    co2:
-      name: "${pretty_name} CO2"
-      id: co2
-    update_interval: 60s
-
   - platform: sht3xd
     temperature:
       id: temp
@@ -77,37 +58,57 @@ sensor:
     humidity:
       id: humidity
       name: "${pretty_name} Humidity"
+    address: 0x44
     update_interval: 90s
 
-  - platform: sgp30
-    tvoc:
-      name: "${pretty_name} TVOC"
-      accuracy_decimals: 1
-    eco2:
-      name: "${pretty_name} eCO2"
-      accuracy_decimals: 1
-    store_baseline: yes
-    address: 0x58
-    update_interval: 1s
-
-  - platform: wifi_signal
-    id: "${wifi_name}_wifi_signal"
-    name: "${pretty_name} WiFi Signal"
+  - platform: senseair
+    id: senseair_s8
+    uart_id: uart2
+    co2:
+      id: co2
+      name: "${pretty_name} CO2 Value"
     update_interval: 60s
 
+  - platform: pmsx003
+    type: PMSX003
+    uart_id: uart1
+    pm_2_5:
+      id: pm25
+      name: "${pretty_name} PM25"
+      filters:
+        - sliding_window_moving_average:
+            window_size: 30
+            send_every: 30
+    pm_1_0:
+      id: pm10
+      name: "${pretty_name} PM1"
+      filters:
+        - sliding_window_moving_average:
+            window_size: 30
+            send_every: 30
+    pm_10_0:
+      id: pm100
+      name: "${pretty_name} PM10"
+      filters:
+        - sliding_window_moving_average:
+            window_size: 30
+            send_every: 30
+      
 display:
   - platform: ssd1306_i2c
-    model: "SH1106 128x64"
-    id: oled_display
+    id: oled
+    model: "SSD1306 64x48"
     address: 0x3C
-    lambda: |-
-      it.printf(0, 0, id(sf_mono), "TMP: %.0f°F", (id(temp).state*1.8)+32);
-      it.printf(0, 14, id(sf_mono), "HUM: %.0f", id(humidity).state);
-      it.printf(0, 28, id(sf_mono), "CO2: %.0fppm", id(co2).state);
-      it.printf(0, 42, id(sf_mono), "PM25: %.0f", id(pm25).state);
+    pages:
+      - id: page1
+        lambda: |-
+          it.printf(0, 0, id(sf_mono), "TMP: %.0f°F", (id(temp).state*1.8)+32);
+          it.printf(0, 14, id(sf_mono), "HUM: %.0f", id(humidity).state);
+          it.printf(0, 28, id(sf_mono), "CO2: %.0fppm", id(co2).state);
+          it.printf(0, 42, id(sf_mono), "PM25: %.0f", id(pm25).state);
 
 interval:
   - interval: 5s
     # Cycle through page on display
     then:
-      - component.update: oled_display
+      - component.update: oled
