@@ -1,39 +1,48 @@
+# https://esphome.io/components/esphome.html
 esphome:
   name: $device_name
   comment: "${device_type}"
 
+# https://esphome.io/components/esp8266.html
 esp8266:
   board: $board
   framework:
     version: $framework_version
 
+# https://esphome.io/components/logger.html
 logger:
     level: $logger_level
 
+# https://esphome.io/components/api.html
 api:
   encryption:
     key: !secret api_key
 
+# https://esphome.io/components/ota.html
 ota:
   password: !secret ota_password
 
+# https://esphome.io/components/wifi.html
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  power_save_mode: HIGH # for ESP8266 LOW/HIGH are mixed up, esphome/issues/issues/1532
+  power_save_mode: HIGH  # for ESP8266 LOW/HIGH are mixed up, esphome/issues/issues/1532
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "${device_name} Fallback"
     password: !secret fallback_password
 
+# https://esphome.io/components/captive_portal.html
 captive_portal:
 
+# https://esphome.io/components/time/homeassistant.html
 time:
   - platform: homeassistant
     id: homeassistant_time
 
-# web_server:
-#   port: 80
-#   auth:
-#     username: admin
-#     password: !secret web_server_password
+# https://esphome.io/components/web_server.html
+web_server:
+  port: 80
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
