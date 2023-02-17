@@ -1,0 +1,77 @@
+# This is adapted from the work Dr. Zzs did on
+# setting up a Sonoff SV with Tasmota:
+# https://gist.github.com/Snipercaine/f3908a051fd79e6d7d7b765152666c2a
+
+substitutions:
+  device_name: ""
+  pretty_name: ""
+  device_type: "Sonoff SV"
+  board: "esp01_1m"
+  framework_version: "recommended"
+  logger_level: DEBUG
+
+# Common ESP8266 Config
+<<: !include .common_esp8266.yaml
+
+# Device Specific Config
+cover:
+  - platform: template
+    name: "${pretty_name}"
+    device_class: garage
+    assumed_state: true
+    lambda: |-
+      if (id(reed_sensor).state) {
+        return COVER_OPEN;
+      } else {
+        return COVER_CLOSED;
+      }
+    open_action:
+      - switch.turn_on: relay
+      - delay: 500ms
+      - switch.turn_off: relay
+    close_action:
+      - switch.turn_on: relay
+      - delay: 500ms
+      - switch.turn_off: relay
+    stop_action:
+      - switch.turn_on: relay
+      - delay: 500ms
+      - switch.turn_off: relay
+
+switch:
+  - platform: gpio
+    name: "${pretty_name} Relay"
+    id: relay
+    pin:
+      number: GPIO12
+      mode: OUTPUT
+    internal: true
+
+binary_sensor:
+  # Reed sensor to detect if door is closed
+  - platform: gpio
+    name: "${pretty_name} Reed Sensor"
+    id: reed_sensor
+    device_class: door
+    pin:
+      number: GPIO14
+      mode: INPUT_PULLUP
+    internal: true
+
+  # Tac switch on the Sonoff SV
+  - platform: gpio
+    name: "${pretty_name} Test Button"
+    id: button
+    pin: 
+      number: GPIO0
+      mode: INPUT_PULLUP
+    internal: true
+    on_press:
+      - switch.turn_on: relay
+      - delay: 500ms
+      - switch.turn_off: relay
+
+sensor:
+  - platform: wifi_signal
+    name: "${pretty_name} WiFi Strength"
+    update_interval: 300s
